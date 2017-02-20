@@ -1,6 +1,11 @@
-class NotSignedException(Exception):
+class NotLogedException(Exception):
     def __str__(self):
         return "还未登陆或者登陆已经失效"
+
+
+class LoginFail(Exception):
+    def __str__(self):
+        return "登录失败，建议官网手动登陆一次"
 
 
 class UnExceptedException(Exception):

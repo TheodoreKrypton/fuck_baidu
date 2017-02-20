@@ -9,7 +9,7 @@ from . import base, exceptions
 from .conf import default_conf
 
 
-class LoginRecode:
+class LogRecode:
     def __init__(self,
                  user_name: str,
                  password: str,
@@ -26,22 +26,43 @@ class LoginRecode:
 
         if self.auto_load_recode:
             self.try_load()
+        self.__has_prepared_for_login = False
 
-    def login(self):
-        # 1.获取cookies:BAIDUID
-        self.__visit_home_page()
-        # 2.获取token
-        self.__get_api()
-        # 3.获取cookies:UBI和PASSID
-        self.__login_history()
-        # 4.检查登陆选项
-        self.__login_check()
-        # 5.处理验证码
-        self.__gen_image()
-        # 6.获取pubkey和key
-        self.__get_public_key()
-        # 7.正式登陆
-        self.__login()
+    def login_with_user(self):
+        verify_image_url = self.get_verify_image_url()
+        if verify_image_url != "":
+            print("请访问以下网址查看验证码并输入\n{verify_image_url}".format(verify_image_url=verify_image_url))
+            verify_code = input()
+        else:
+            verify_code = ""
+        self.login_with_verify_code(verify_code)
+        if not self.has_logined():
+            raise exceptions.LoginFail
+
+    def get_verify_image_url(self):
+        self.__prepare_for_login()
+        if self.code_string == "":
+            return None
+        else:
+            return "https://passport.baidu.com/cgi-bin/genimage?{code_string}".format(code_string=self.code_string)
+
+    def login_with_verify_code(self, verify_code):
+        self.__prepare_for_login()
+        self.__login(verify_code)
+
+    def __prepare_for_login(self):
+        if not self.__has_prepared_for_login:
+            # 1.获取cookies:BAIDUID
+            self.__visit_home_page()
+            # 2.获取token
+            self.__get_api()
+            # 3.获取cookies:UBI和PASSID
+            self.__login_history()
+            # 4.检查登陆选项
+            self.__login_check()
+            # 5.获取pubkey和key
+            self.__get_public_key()
+        self.__has_prepared_for_login = True
 
     def __visit_home_page(self):
         # 因为URL肯定不会变，所以直接写死
@@ -86,15 +107,6 @@ class LoginRecode:
         self.code_string = re_result.group("code_string")
         self.v_code_type = re_result.group("v_code_type")
 
-    def __gen_image(self):
-        if self.code_string == "":
-            verify_code = ""
-        else:
-            url = "https://passport.baidu.com/cgi-bin/genimage?{code_string}".format(code_string=self.code_string)
-            print("请查看该验证码并输入:{url}".format(url=url))
-            verify_code = input()
-        self.verify_code = verify_code
-
     def __get_public_key(self):
         headers = default_conf.base_headers
         url = "https://passport.baidu.com/v2/getpublickey?token={token}&tpl=mn&apiver=v3&tt={tt}&gid={gid}&callback=bd__cbs__9t0drq".format(
@@ -107,7 +119,7 @@ class LoginRecode:
         key = rsa.PublicKey.load_pkcs1_openssl_pem(self.pubkey)
         self.rsaed_password = base64.b64encode(rsa.encrypt(self.password.encode("utf-8"), key))
 
-    def __login(self):
+    def __login(self, verify_code: str):
         data = {
             'staticpage': "https://www.baidu.com/cache/user/html/v3Jump.html",
             'charset': "UTF-8",
@@ -130,7 +142,7 @@ class LoginRecode:
             'splogin': "rate",
             "username": self.user_name,
             "password": self.rsaed_password,
-            "verifycode": self.verify_code,
+            "verifycode": verify_code,
             "mem_pass": "on",
             "rsakey": self.key,
             'crypttype': "12",
@@ -179,7 +191,7 @@ class LoginRecode:
 
     def assert_logined(self):
         if not self.has_logined():
-            raise exceptions.NotSignedException
+            raise exceptions.NotLogedException
 
     def __del__(self):
         if self.auto_save_recode and self.has_logined():
