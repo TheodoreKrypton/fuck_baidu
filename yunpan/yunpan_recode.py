@@ -25,7 +25,7 @@ class LoginRecode:
         self.auto_save_recode = auto_save_recode
 
         if self.auto_load_recode:
-            self.__try_load()
+            self.try_load()
 
     def login(self):
         # 1.获取cookies:BAIDUID
@@ -145,7 +145,7 @@ class LoginRecode:
         self.session.post(url, data=data, headers=headers)
 
     def save(self):
-        recode_file_dir = os.path.split(self.recode_path)[0]
+        recode_file_dir = os.path.dirname(self.recode_path)
         if not os.path.exists(recode_file_dir):
             os.makedirs(recode_file_dir)
 
@@ -153,7 +153,7 @@ class LoginRecode:
             cookies = self.session.cookies.get_dict()
             json.dump(cookies, f)
 
-    def __try_load(self):
+    def try_load(self):
         if not os.path.exists(self.recode_path):
             return False
         else:
@@ -166,7 +166,7 @@ class LoginRecode:
             return True
 
     def load(self):
-        if not self.__try_load():
+        if not self.try_load():
             raise exceptions.RecodeNotExistsException(self.recode_path)
 
     def has_logined(self):

@@ -42,6 +42,7 @@ class RemoteFileHasBeenModified(Exception):
     def __str__(self):
         return "远程文件已被修改，请重新下载"
 
+
 class DownloadFail(Exception):
     def __str__(self):
         return "下载未完成，请重试"

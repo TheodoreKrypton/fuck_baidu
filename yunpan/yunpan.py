@@ -37,8 +37,6 @@ class YunPan:
     def assert_logined(self):
         return self.__log_info.assert_logined()
 
-    # 登陆部分结束
-
     # 下载部分开始
     def download_one_file(self, remote_path: str, local_path: str = None):
         self.__log_info.assert_logined()
@@ -51,5 +49,3 @@ class YunPan:
 
         the_remote_file = RemoteFile(remote_path, self.__session)
         the_remote_file.download_to(local_path)
-
-    # 下载部分结束

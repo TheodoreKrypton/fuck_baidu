@@ -15,7 +15,6 @@ class RemoteFile:
         self.url = "http://c.pcs.baidu.com/rest/2.0/pcs/file?method=download&app_id=250528&path={path}".format(
             path=remote_path)
 
-        headers = default_conf.base_headers
         response = self.session.head(self.url, headers=default_conf.base_headers)
         if response.status_code == 404:
             raise exceptions.RemoteFileNotExistException(self.remote_path)
@@ -64,11 +63,11 @@ class RemoteFile:
                             temp_file.close()
                             os.remove(temp_file_path)
                             raise the_error
-
-                temp_file.seek(default_conf.download_block_size * block_index)
-                temp_file.write(data)
-                temp_file.flush()
-                recved_block_number += 1
+                else:
+                    temp_file.seek(default_conf.download_block_size * block_index)
+                    temp_file.write(data)
+                    temp_file.flush()
+                    recved_block_number += 1
             except Empty:
                 time.sleep(default_conf.poll_interval)
 
