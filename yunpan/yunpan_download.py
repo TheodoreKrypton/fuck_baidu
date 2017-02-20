@@ -8,7 +8,7 @@ from . import exceptions, base
 from .conf import default_conf
 
 
-class RemoteFile:
+class Downloader:
     def __init__(self, remote_path: str, session: requests.Session):
         self.session = session
         self.remote_path = remote_path
@@ -17,7 +17,7 @@ class RemoteFile:
 
         response = self.session.head(self.url, headers=default_conf.base_headers)
         if response.status_code == 404:
-            raise exceptions.RemoteFileNotExistException(self.remote_path)
+            raise exceptions.RemoteFileNotExist(self.remote_path)
         response_headers = response.headers
         self.file_size = int(response_headers["x-bs-file-size"])
         self.etag = response_headers["Etag"]
@@ -25,8 +25,6 @@ class RemoteFile:
 
         # math.ceil => 向上取整
         self.block_number = math.ceil(self.file_size / default_conf.download_block_size)
-        # TODO 后期用于断点续传,暂时并没有意义
-        self.to_download = [1, ] * self.block_number
 
     def download_to(self, target_path):
         target_dir = os.path.dirname(target_path)
@@ -39,9 +37,9 @@ class RemoteFile:
         # 特殊信息发送以(None,message)的形式发送到主线程
         self.index_and_data_queue = Queue()
         self.task_queue = Queue()
-        for (index, i) in enumerate(self.to_download):
-            if i != 0:
-                self.task_queue.put(index)
+        # TODO 下一步实现断点续传这里需要改
+        for i in range(self.block_number):
+            self.task_queue.put(i)
 
         for i in range(default_conf.thread_pool_size):
             # 设置子线程为守护线程，主线程接收到足够多数据后直接退出

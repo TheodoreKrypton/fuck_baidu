@@ -55,11 +55,11 @@ def process_remote_error_message(error_text: str, remote_path: str):
         error_message = error_info['error_msg']
 
         if error_code == 31066:
-            raise exceptions.RemoteFileNotExistException(remote_path)
+            raise exceptions.RemoteFileNotExist(remote_path)
         elif error_code == 31074:
-            raise exceptions.CanNotDownloadException
+            raise exceptions.CanNotDownload
         else:
-            raise exceptions.UnExceptedRemoteError(error_text)
+            raise exceptions.UnExceptedRemoteReturnErrorMessage(error_text)
 
     except (KeyError, json.JSONDecodeError) as e:
-        exceptions.UnExceptedRemoteError(error_text)
+        exceptions.UnExceptedRemoteReturnErrorMessage(error_text)

@@ -9,13 +9,13 @@ from . import base, exceptions
 from .conf import default_conf
 
 
-class LogRecode:
+class LoginRecoder:
     def __init__(self,
                  user_name: str,
                  password: str,
                  recode_path: str,
-                 auto_save_recode: bool = False,
-                 auto_load_recode: bool = False):
+                 auto_save_recode: bool,
+                 auto_load_recode: bool):
         self.session = requests.session()
         self.gid = base.build_gid()
         self.user_name = user_name
@@ -179,7 +179,7 @@ class LogRecode:
 
     def load(self):
         if not self.try_load():
-            raise exceptions.RecodeNotExistsException(self.recode_path)
+            raise exceptions.RecodeNotExists(self.recode_path)
 
     def has_logined(self):
         url = "http://pan.baidu.com/disk/home"
@@ -191,7 +191,7 @@ class LogRecode:
 
     def assert_logined(self):
         if not self.has_logined():
-            raise exceptions.NotLogedException
+            raise exceptions.LoginError
 
     def __del__(self):
         if self.auto_save_recode and self.has_logined():

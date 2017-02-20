@@ -19,11 +19,11 @@ def verify_image_identification(varify_image_url):
 the_yun_pan = YunPan("{用户名}", "{密码}", auto_load_recode=True, auto_save_recode=True)
 
 if not the_yun_pan.has_logined:
-    # LogRecode类记录并处理登陆相关信息
-    the_log_recode = the_yun_pan.log_recode
-    verify_image_url = the_log_recode.get_verify_image_url()
+    # LoginRecode类记录并处理登陆相关信息
+    the_login_recode = the_yun_pan.login_recoder
+    verify_image_url = the_login_recode.get_verify_image_url()
     verify_code = verify_image_identification(verify_image_url)
-    the_log_recode.login_with_verify_code(verify_code=verify_code)
+    the_login_recode.login_with_verify_code(verify_code=verify_code)
 # 如果没有登陆成功会抛出异常
 the_yun_pan.assert_logined()
 # the_yun_pan.download_one_file(<远程路径>,[本地路径])

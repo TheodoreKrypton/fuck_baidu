@@ -1,4 +1,4 @@
-class NotLogedException(Exception):
+class LoginError(Exception):
     def __str__(self):
         return "还未登陆或者登陆已经失效"
 
@@ -13,7 +13,7 @@ class UnExceptedException(Exception):
         return "我也不知道是什么引起了这个错误"
 
 
-class RecodeNotExistsException(Exception):
+class RecodeNotExists(Exception):
     def __init__(self, recode_path: str):
         self.recode_path = recode_path
 
@@ -22,12 +22,12 @@ class RecodeNotExistsException(Exception):
             recode_path=self.recode_path)
 
 
-class CanNotDownloadException(Exception):
+class CanNotDownload(Exception):
     def __str__(self):
         return "本方法不支持下载文件夹"
 
 
-class RemoteFileNotExistException(Exception):
+class RemoteFileNotExist(Exception):
     def __init__(self, remote_path: str):
         self.remote_path = remote_path
 
@@ -35,7 +35,7 @@ class RemoteFileNotExistException(Exception):
         return "网盘上没有该文件:{remote_path}".format(remote_path=self.remote_path)
 
 
-class UnExceptedRemoteError(Exception):
+class UnExceptedRemoteReturnErrorMessage(Exception):
     def __init__(self, error_message: str):
         self.error_message = error_message
 
