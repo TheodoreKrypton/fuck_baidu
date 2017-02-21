@@ -3,7 +3,7 @@ import os
 
 class __Conf:
     def __init__(self):
-        self.download_block_size = 1024 * 1024 * 5
+        self.download_block_size = 1024 * 1024
         self.home_path = os.path.expanduser("~")
         self.app_path = os.path.join(self.home_path, ".fuck_baidu")
         self.recode_path = os.path.join(self.app_path, "recode")

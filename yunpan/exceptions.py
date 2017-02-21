@@ -51,3 +51,11 @@ class RemoteFileHasBeenModified(Exception):
 class DownloadFail(Exception):
     def __str__(self):
         return "下载未完成，请重试"
+
+
+class TargetFileExists(Exception):
+    def __init__(self, target_path):
+        self.target_path = target_path
+
+    def __str__(self):
+        return "所有数据已经下载至临时文件，但目标文件已经存在，请自行确认是否需要替换:{target_path}".format(target_path=self.target_path)

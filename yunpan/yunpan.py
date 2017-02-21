@@ -41,7 +41,7 @@ class YunPan:
 
     # 下载部分方法
 
-    def download_one_file(self, remote_path: str, local_path: str = None):
+    def download_one_file(self, remote_path: str, local_path: str = None, overwrite: bool = False):
         self.login_recoder.assert_logined()
         if "/" not in remote_path or not remote_path.startswith("/"):
             raise exceptions.RemoteFileNotExist(remote_path)
@@ -51,4 +51,4 @@ class YunPan:
             local_path = os.path.join(default_conf.target_dir, remote_path.split("/")[-1])
 
         the_downloader = Downloader(remote_path, self.__session)
-        the_downloader.download_to(local_path)
+        the_downloader.download_to(local_path, overwrite)

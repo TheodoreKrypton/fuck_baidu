@@ -2,8 +2,8 @@ import os
 import time
 import math
 import requests
-import threading
-from queue import Queue, Empty
+import queue
+from concurrent.futures import ThreadPoolExecutor
 from . import exceptions, base
 from .conf import default_conf
 
@@ -26,70 +26,39 @@ class Downloader:
         # math.ceil => 向上取整
         self.block_number = math.ceil(self.file_size / default_conf.download_block_size)
 
-    def download_to(self, target_path):
+    def download_to(self, target_path: str, overwirte: bool):
         target_dir = os.path.dirname(target_path)
         if not os.path.exists(target_dir):
             os.makedirs(target_dir)
-
+        print(self.url)
         temp_file_path = ".".join((target_path, self.remote_md5, "fktd"))
         temp_file = open(temp_file_path, 'wb')
-        # worker进程完成下载后将数据通过index_and_data_queue以(index,data)的形式发送至主线程
-        # 特殊信息发送以(None,message)的形式发送到主线程
-        self.index_and_data_queue = Queue()
-        self.task_queue = Queue()
-        # TODO 下一步实现断点续传这里需要改
-        for i in range(self.block_number):
-            self.task_queue.put(i)
+        self.index_and_data_queue = queue.Queue()
 
-        for i in range(default_conf.thread_pool_size):
-            # 设置子线程为守护线程，主线程接收到足够多数据后直接退出
-            t = threading.Thread(target=self.__download_worker, daemon=True)
-            t.start()
-
-        recved_block_number = 0
-        # 当前存活的worker线程数量
-        worker_number = default_conf.thread_pool_size
-        while recved_block_number < self.block_number and worker_number > 0:
-            try:
-                (block_index, data) = self.index_and_data_queue.get_nowait()
-
-                if block_index == None:
-                    if isinstance(data, Exception):
-                        worker_number -= 1
-                        the_error = data
-                        if isinstance(the_error, exceptions.RemoteFileHasBeenModified):
-                            temp_file.close()
-                            os.remove(temp_file_path)
-                            raise the_error
-                else:
-                    temp_file.seek(default_conf.download_block_size * block_index)
-                    temp_file.write(data)
-                    temp_file.flush()
-                    recved_block_number += 1
-            except Empty:
-                time.sleep(default_conf.poll_interval)
+        executor = ThreadPoolExecutor(default_conf.thread_pool_size)
+        all_future = [executor.submit(self.__download_one_block, i) for i in range(self.block_number)]
+        has_download_blocks = set()
+        while len(has_download_blocks) < self.block_number:
+            for (block_index, the_future) in enumerate(all_future):
+                if block_index not in has_download_blocks and the_future.done():
+                    has_download_blocks.add(block_index)
+                    if the_future.exception():
+                        raise the_future.exception()
+                    else:
+                        block_index, data = the_future.result()
+                        temp_file.seek(block_index * default_conf.download_block_size)
+                        temp_file.write(data)
+                        temp_file.flush()
+            time.sleep(default_conf.poll_interval)
 
         temp_file.close()
+        executor.shutdown()
         if os.path.exists(target_path):
-            os.remove(target_path)
+            if overwirte:
+                os.remove(target_path)
+            else:
+                raise exceptions.TargetFileExists(target_path)
         os.rename(temp_file_path, target_path)
-
-    def __download_worker(self):
-        while True:
-            block_index = self.task_queue.get()
-            try:
-                data = self.__download_one_block(block_index)
-                self.index_and_data_queue.put((block_index, data))
-            except exceptions.RemoteFileHasBeenModified as e:
-                # 将异常信息发送到主线程，由主线程终止任务,子线程不抛出错误
-                self.index_and_data_queue.put((None, e))
-                return
-            except Exception as e:
-                # 将未完成的任务重新发布
-                self.task_queue.put(block_index)
-                # 将异常信息发送到主线程，主线程不抛出错误，子线程抛出错误帮助堆栈追踪
-                self.index_and_data_queue.put((None, e))
-                raise e
 
     def __download_one_block(self, block_index):
         start = block_index * default_conf.download_block_size
@@ -105,6 +74,6 @@ class Downloader:
             raise exceptions.RemoteFileHasBeenModified
 
         if temp_response.status_code == 206:
-            return temp_response.content
+            return (block_index, temp_response.content)
         else:
             base.process_remote_error_message(temp_response.text, self.remote_path)
