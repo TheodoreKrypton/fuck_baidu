@@ -1,8 +1,8 @@
 import os
 import time
 import math
+import json
 import requests
-import queue
 from concurrent.futures import ThreadPoolExecutor
 from . import exceptions, base
 from .conf import default_conf
@@ -30,35 +30,54 @@ class Downloader:
         target_dir = os.path.dirname(target_path)
         if not os.path.exists(target_dir):
             os.makedirs(target_dir)
-        print(self.url)
+
         temp_file_path = ".".join((target_path, self.remote_md5, "fktd"))
-        temp_file = open(temp_file_path, 'wb')
-        self.index_and_data_queue = queue.Queue()
+        download_info = DownloadInfo(target_path, self.remote_md5)
+
+        # 直接使用"rb+"方式打开，如果文件不存在，会抛出一场
+        # 直接使用“wb”或者"wb+"打开，会清空文件内容
+        # 直接使用"ab+"方式打开，文件指针在文件末尾，且无法使用seek移动到前面
+        if os.path.exists(temp_file_path):
+            temp_file = open(temp_file_path, 'rb+')
+
+            if os.path.exists(download_info.info_path):
+                download_info.load()
+                if download_info.block_size != default_conf.download_block_size or download_info.etag != self.etag:
+                    raise exceptions.DownloadInfoUnMatched(download_info.info_path)
+            else:
+                download_info.set_info(self.etag, set([i for i in range(self.block_number)]),
+                                       default_conf.download_block_size)
+        else:
+            temp_file = open(temp_file_path, 'wb')
+            download_info.set_info(self.etag, set([i for i in range(self.block_number)]),
+                                   default_conf.download_block_size)
+
+        download_info.save()
 
         executor = ThreadPoolExecutor(default_conf.thread_pool_size)
-        all_future = [executor.submit(self.__download_one_block, i) for i in range(self.block_number)]
-        has_download_blocks = set()
-        while len(has_download_blocks) < self.block_number:
-            for (block_index, the_future) in enumerate(all_future):
-                if block_index not in has_download_blocks and the_future.done():
-                    has_download_blocks.add(block_index)
-                    if the_future.exception():
-                        raise the_future.exception()
-                    else:
-                        block_index, data = the_future.result()
-                        temp_file.seek(block_index * default_conf.download_block_size)
+        all_future = [executor.submit(self.__download_one_block, i) for i in download_info.to_download_blocks]
+        while download_info.to_download_blocks:
+            for the_future in [i for i in all_future if i.done()]:
+                if the_future.exception() is None:
+                    block_index, data = the_future.result()
+                    if block_index in download_info.to_download_blocks:
+                        temp_file.seek(default_conf.download_block_size * block_index)
                         temp_file.write(data)
                         temp_file.flush()
-            time.sleep(default_conf.poll_interval)
-
+                        download_info.to_download_blocks.remove(block_index)
+                        download_info.save()
+                else:
+                    raise the_future.exception()
         temp_file.close()
         executor.shutdown()
+
         if os.path.exists(target_path):
             if overwirte:
                 os.remove(target_path)
             else:
                 raise exceptions.TargetFileExists(target_path)
         os.rename(temp_file_path, target_path)
+        os.remove(download_info.info_path)
 
     def __download_one_block(self, block_index):
         start = block_index * default_conf.download_block_size
@@ -77,3 +96,31 @@ class Downloader:
             return (block_index, temp_response.content)
         else:
             base.process_remote_error_message(temp_response.text, self.remote_path)
+
+
+class DownloadInfo:
+    def __init__(self, target_path: str, md5: str):
+        self.target_path = target_path
+        self.md5 = md5
+        self.info_path = ".".join((target_path, md5, "fkinfo"))
+
+    def load(self):
+        with open(self.info_path) as f:
+            info_dict = json.load(f)
+            self.block_size = info_dict["block_size"]
+            self.etag = info_dict['etag']
+            self.to_download_blocks = set(info_dict["to_download_blocks"])
+
+    def save(self):
+        info_dict = {
+            "block_size": self.block_size,
+            "etag": self.etag,
+            "to_download_blocks": list(self.to_download_blocks)
+        }
+        with open(self.info_path, 'w')as f:
+            json.dump(info_dict, f)
+
+    def set_info(self, etag: str, to_download_blocks: set, block_size: int):
+        self.etag = etag
+        self.to_download_blocks = to_download_blocks
+        self.block_size = block_size

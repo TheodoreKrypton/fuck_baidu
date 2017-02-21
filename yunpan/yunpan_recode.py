@@ -49,6 +49,8 @@ class LoginRecoder:
     def login_with_verify_code(self, verify_code):
         self.__prepare_for_login()
         self.__login(verify_code)
+        if self.auto_save_recode and self.has_logined():
+            self.save()
 
     def __prepare_for_login(self):
         if not self.__has_prepared_for_login:
@@ -192,7 +194,3 @@ class LoginRecoder:
     def assert_logined(self):
         if not self.has_logined():
             raise exceptions.LoginError
-
-    def __del__(self):
-        if self.auto_save_recode and self.has_logined():
-            self.save()

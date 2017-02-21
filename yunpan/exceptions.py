@@ -59,3 +59,11 @@ class TargetFileExists(Exception):
 
     def __str__(self):
         return "所有数据已经下载至临时文件，但目标文件已经存在，请自行确认是否需要替换:{target_path}".format(target_path=self.target_path)
+
+
+class DownloadInfoUnMatched(Exception):
+    def __init__(self, info_path):
+        self.info_path = info_path
+
+    def __str__(self):
+        return "远程文件已被修改或数据块大小被修改"

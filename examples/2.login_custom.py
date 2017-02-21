@@ -16,6 +16,9 @@ def verify_image_identification(varify_image_url):
 
 
 # YunPan("<用户名>", "<密码>", [auto_save=False], [auto_load=False])
+# auto_load指尝试从{recode_path}文件中加载之前的登录信息，不管成功与否都不会抛出异常也没有返回值，请使用has_logined装饰器判断是否登陆
+# auto_save指在登陆完成后自动保存的登录信息到{recode_path}中
+# 其中，recode_path在conf.py中有默认值
 the_yun_pan = YunPan("{用户名}", "{密码}", auto_load_recode=True, auto_save_recode=True)
 
 if not the_yun_pan.has_logined:
@@ -24,7 +27,8 @@ if not the_yun_pan.has_logined:
     verify_image_url = the_login_recode.get_verify_image_url()
     verify_code = verify_image_identification(verify_image_url)
     the_login_recode.login_with_verify_code(verify_code=verify_code)
-# 如果没有登陆成功会抛出异常
+# 如果没有登陆成功会抛出异常：LoginError
 the_yun_pan.assert_logined()
-# the_yun_pan.download_one_file(<远程路径>,[本地路径])
-the_yun_pan.download_one_file("/1.mp4")
+# the_yun_pan.download_one_file(<远程路径>,[本地路径],[overwrite=False])
+# 如果overwrite参数为False且本地路径存在，将会抛出异常：TargetFileExists
+the_yun_pan.download_one_file("/1.mp4", overwrite=True)
