@@ -26,6 +26,12 @@ class Downloader:
         self.block_number = math.ceil(self.file_size / default_conf.download_block_size)
 
     def download_to(self, target_path: str, overwirte: bool):
+        if os.path.exists(target_path):
+            if overwirte:
+                os.remove(target_path)
+            else:
+                raise exceptions.LocalFileExists(target_path)
+
         target_dir = os.path.dirname(target_path)
         if not os.path.exists(target_dir):
             os.makedirs(target_dir)
@@ -70,11 +76,6 @@ class Downloader:
         temp_file.close()
         executor.shutdown()
 
-        if os.path.exists(target_path):
-            if overwirte:
-                os.remove(target_path)
-            else:
-                raise exceptions.TargetFileExists(target_path)
         os.rename(temp_file_path, target_path)
         os.remove(download_info.info_path)
 
