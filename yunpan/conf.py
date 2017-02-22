@@ -7,10 +7,8 @@ class __Conf:
         self.home_path = os.path.expanduser("~")
         self.app_path = os.path.join(self.home_path, ".fuck_baidu")
         self.recode_path = os.path.join(self.app_path, "recode")
-        self.download_info_database_file_path = os.path.join(self.app_path, "info.db")
-        self.download_info_table_name = "download_infos"
         self.thread_pool_size = 5
-        self.target_dir = "fuck_download"
+        self.target_dir = "fuck_download/"
         self.poll_interval = 1
         self.__base_header = {
             'Referer': "https://www.baidu.com/",

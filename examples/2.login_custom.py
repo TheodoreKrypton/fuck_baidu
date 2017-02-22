@@ -29,6 +29,3 @@ if not the_yun_pan.has_logined:
     the_login_recode.login_with_verify_code(verify_code=verify_code)
 # 如果没有登陆成功会抛出异常：LoginError
 the_yun_pan.assert_logined()
-# the_yun_pan.download_one_file(<远程路径>,[本地路径],[overwrite=False])
-# 如果overwrite参数为False且本地路径存在，将会抛出异常：TargetFileExists
-the_yun_pan.download_one_file("/1.mp4", overwrite=True)

@@ -6,10 +6,10 @@
 # 我知道我这样写注释有很多背景噪音，但我就是这样写了233333
 from yunpan import YunPan
 
-# YunPan("<用户名>", "<密码>", [auto_save=False], [auto_load=False])
-# auto_load指尝试从{recode_path}文件中加载之前的登录信息，不管成功与否都不会抛出异常也没有返回值，请使用has_logined装饰器判断是否登陆
+# YunPan("<用户名>", "<密码>", [auto_save=False], [auto_load=False],[recode_path={recode_path}])
+# auto_load指尝试从{default_recode_path}文件中加载之前的登录信息，不管成功与否都不会抛出异常也没有返回值，请使用has_logined装饰器判断是否登陆
 # auto_save指在登陆完成后自动保存的登录信息到{recode_path}中
-# 其中，recode_path在conf.py中有默认值
+# 其中，default_recode_path在conf.py中由默认值recode_path规定
 the_yun_pan = YunPan("{用户名}", "{密码}", auto_load_recode=True, auto_save_recode=True)
 
 if not the_yun_pan.has_logined:
@@ -17,7 +17,15 @@ if not the_yun_pan.has_logined:
     the_yun_pan.login_with_user()
 
 # 如果没有登陆成功会抛出异常：LoginError
+# 需要注意的是，其原理为尝试访问百度首页检测是否登陆成功
+# 开销较大，建议合理使用
 the_yun_pan.assert_logined()
-# the_yun_pan.download_one_file(<远程路径>,[本地路径],[overwrite=False])
-# 如果overwrite参数为False且本地路径存在，将会抛出异常：TargetFileExists
-the_yun_pan.download_one_file("/1.mp4", overwrite=True)
+
+# the_yun_pan.get_file([remote_path="/"])
+# 获取远程文件对象
+the_remote_file = the_yun_pan.get_file("/新建文件夹/")
+
+# the_remote_file.download_to([local_path={default_local_path}],[overwrite=False])
+# 下载远征文件对象对应的远程文件或者文件夹到指定的本地路径
+# 如果overwrite为False且目标路径文件存在，会抛出异常yunpan.exceptions.LocalFileExists
+the_remote_file.download_to("DCjanus/fuck_download/")

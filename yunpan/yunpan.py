@@ -1,5 +1,5 @@
 import os
-from . import yunpan_recode, exceptions
+from . import yunpan_recode, exceptions, yunpan_remote_file
 from .conf import default_conf
 from .yunpan_download import Downloader
 
@@ -18,7 +18,7 @@ class YunPan:
             auto_save_recode=auto_save_recode,
             auto_load_recode=auto_load_recode
         )
-        self.__session = self.login_recoder.session
+        self.session = self.login_recoder.session
 
     # 登陆部分方法
 
@@ -39,16 +39,7 @@ class YunPan:
     def assert_logined(self):
         return self.login_recoder.assert_logined()
 
-    # 下载部分方法
-
-    def download_one_file(self, remote_path: str, local_path: str = None, overwrite: bool = False):
+    # 获取远程文件对象
+    def get_file(self, remote_path: str = "/"):
         self.login_recoder.assert_logined()
-        if "/" not in remote_path or not remote_path.startswith("/"):
-            raise exceptions.RemoteFileNotExist(remote_path)
-        if remote_path.endswith("/"):
-            raise exceptions.CanNotDownload
-        if local_path is None:
-            local_path = os.path.join(default_conf.target_dir, remote_path.split("/")[-1])
-
-        the_downloader = Downloader(remote_path, self.__session)
-        the_downloader.download_to(local_path, overwrite)
+        return yunpan_remote_file.RemoteFile(remote_path, self.session)

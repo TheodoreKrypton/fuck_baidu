@@ -4,25 +4,50 @@ import time
 import random
 import requests
 from .conf import default_conf
+from . import exceptions
 
 
 # 不面向使用者的Lister实现
-# 暂时未考虑参数校验和返回结果校验
-class RawLister:
+# 需要注意的是，由于百度网盘API限制
+# Lister需要list的远程路径是一个文件时
+# 其返回结果与空文件夹无异
+class Lister:
     def __init__(self, session: requests.Session):
         self.session = session
         self.__bdstoken = None
 
-    def list_by_dict(self, remote_path: str):
-        url = "http://pan.baidu.com/api/list?dir={remote_path}&bdstoken={bdstoken}&logid={logid}&num=100&order=time&desc=1&clienttype=0&showempty=0&web=1&page=1&channel=chunlei&web=1&app_id=250528".format(
+    # 一次性获取文件夹下所有文件信息，当文件夹下项目过多时将会耗费较长时间
+    # 后期准备做成懒加载的模式
+    # TO improve
+    def list(self, remote_path):
+        result = []
+        page_index = 1
+        temp_result = self.list_one_page(remote_path, page_index)
+        while temp_result:
+            page_index += 1
+            result += temp_result
+            temp_result = self.list_one_page(remote_path, page_index)
+        return result
+
+    # 一次性显示最多一百个结果，可返回空list
+    def list_one_page(self, remote_path: str, page_index: int):
+        url = "http://pan.baidu.com/api/list?dir={remote_path}&bdstoken={bdstoken}&logid={logid}&num=100&order=time&desc=1&clienttype=0&showempty=0&web=1&page={page_index}&channel=chunlei&web=1&app_id=250528".format(
             remote_path=remote_path,
             bdstoken=self.bdstoken,
-            logid=self.log_id
+            logid=self.log_id,
+            page_index=page_index
         )
         temp_text = self.session.get(url, headers=default_conf.base_headers).text
         list_dict = json.loads(temp_text)
-
-        return list_dict
+        # 坑爹BUG
+        # 键值不是error而是errno
+        error_code = list_dict["errno"]
+        if error_code == 0:
+            return list_dict["list"]
+        elif error_code == -9:
+            raise exceptions.RemoteFileNotExist(remote_path)
+        else:
+            raise exceptions.UnExceptedRemoteReturnErrorMessage(temp_text)
 
     @property
     def bdstoken(self):

@@ -53,7 +53,7 @@ class DownloadFail(Exception):
         return "下载未完成，请重试"
 
 
-class TargetFileExists(Exception):
+class LocalFileExists(Exception):
     def __init__(self, target_path):
         self.target_path = target_path
 
@@ -67,3 +67,19 @@ class DownloadInfoUnMatched(Exception):
 
     def __str__(self):
         return "远程文件已被修改或数据块大小被修改"
+
+
+class LocalDirPathCanNotSameAsFile(Exception):
+    def __init__(self, local_path: str):
+        self.local_path = local_path
+
+    def __str__(self):
+        return "目标文件夹路径与现存文件相同:{local_path}".format(local_path=self.local_path)
+
+
+class RemotePathIsFile(Exception):
+    def __init__(self, remote_path):
+        self.remote_path = remote_path
+
+    def __str__(self):
+        return "远程路径对应的是一个文件，无法获取其子目录文件，该路径为{remote_path}".format(remote_path=self.remote_path)
